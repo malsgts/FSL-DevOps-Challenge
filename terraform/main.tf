@@ -2,9 +2,14 @@ provider "aws" {
   region = "us-east-1" # Choose your AWS region
 }
 
+# Random ID for bucket name uniqueness
+resource "random_id" "suffix" {
+  byte_length = 4
+}
+
 # S3 Bucket for Website Hosting
 resource "aws_s3_bucket" "website_bucket" {
-  bucket = "${var.environment}-website-bucket"
+  bucket = "${var.environment}-website-bucket-${random_id.suffix.hex}"
   acl    = "public-read"
 
   website {
@@ -17,14 +22,14 @@ resource "aws_s3_bucket" "website_bucket" {
   }
 
   tags = {
-    Name        = "${var.environment}-website-bucket"
+    Name        = "${var.environment}-website-bucket-${random_id.suffix.hex}"
     Environment = var.environment
   }
 }
 
 # S3 Bucket for Logs
 resource "aws_s3_bucket" "logs_bucket" {
-  bucket = "${var.environment}-logs-bucket"
+  bucket = "${var.environment}-logs-bucket-${random_id.suffix.hex}"
   acl    = "private"
 
   versioning {
@@ -32,7 +37,7 @@ resource "aws_s3_bucket" "logs_bucket" {
   }
 
   tags = {
-    Name        = "${var.environment}-logs-bucket"
+    Name        = "${var.environment}-logs-bucket-${random_id.suffix.hex}"
     Environment = var.environment
   }
 }
@@ -59,6 +64,12 @@ resource "aws_cloudfront_distribution" "app_distribution" {
 
   enabled             = true
   default_root_object = "index.html"
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
 
   logging_config {
     bucket = aws_s3_bucket.logs_bucket.bucket_domain_name
