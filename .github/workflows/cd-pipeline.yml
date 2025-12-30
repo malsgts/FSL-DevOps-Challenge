@@ -1,0 +1,43 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - devel
+      - stage
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Step 2: Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: false
+
+      # Step 3: Set AWS credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # Step 4: Initialize Terraform
+      - name: Terraform Init
+        run: terraform init -backend-config=backend/${{ github.ref_name }}.backend.tf
+
+      # Step 5: Apply Terraform Configuration
+      - name: Terraform Apply
+        run: terraform apply -var-file=env/${{ github.ref_name }}.tfvars -auto-approve
+
+      # Step 6: Output Deployed URLs
+      - name: Output Site URL
+        run: echo "Site URL: $(terraform output site_url)"
