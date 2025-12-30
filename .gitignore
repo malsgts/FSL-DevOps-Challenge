@@ -1,0 +1,12 @@
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/*.tfvars.json
+
+# Node
+node_modules/
+dist/
+build/
+*.log
