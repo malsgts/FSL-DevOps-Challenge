@@ -5,16 +5,6 @@ provider "aws" {
 # S3 Bucket for Website Hosting
 resource "aws_s3_bucket" "website_bucket" {
   bucket = "${var.environment}-website-bucket"
-  acl    = "public-read"
-
-  website {
-    index_document = "index.html"
-    error_document = "error.html"
-  }
-
-  versioning {
-    enabled = true
-  }
 
   tags = {
     Name        = "${var.environment}-website-bucket"
@@ -22,14 +12,34 @@ resource "aws_s3_bucket" "website_bucket" {
   }
 }
 
+resource "aws_s3_bucket_acl" "website_bucket_acl" {
+  bucket = aws_s3_bucket.website_bucket.id
+  acl    = "public-read"
+}
+
+resource "aws_s3_bucket_website_configuration" "website_bucket_website" {
+  bucket = aws_s3_bucket.website_bucket.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "error.html"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "website_bucket_versioning" {
+  bucket = aws_s3_bucket.website_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 # S3 Bucket for Logs
 resource "aws_s3_bucket" "logs_bucket" {
   bucket = "${var.environment}-logs-bucket"
-  acl    = "private"
-
-  versioning {
-    enabled = true
-  }
 
   tags = {
     Name        = "${var.environment}-logs-bucket"
@@ -37,11 +47,31 @@ resource "aws_s3_bucket" "logs_bucket" {
   }
 }
 
+resource "aws_s3_bucket_acl" "logs_bucket_acl" {
+  bucket = aws_s3_bucket.logs_bucket.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_versioning" "logs_bucket_versioning" {
+  bucket = aws_s3_bucket.logs_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "app_distribution" {
   origin {
-    domain_name = aws_s3_bucket.website_bucket.website_endpoint
+    domain_name = aws_s3_bucket_website_configuration.website_bucket_website.website_endpoint
     origin_id   = "S3Origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
   }
 
   default_cache_behavior {
@@ -63,6 +93,12 @@ resource "aws_cloudfront_distribution" "app_distribution" {
   logging_config {
     bucket = aws_s3_bucket.logs_bucket.bucket_domain_name
     prefix = "${var.environment}/"
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
   }
 
   viewer_certificate {
