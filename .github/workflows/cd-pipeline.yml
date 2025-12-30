@@ -15,7 +15,7 @@ jobs:
       # Step 1: Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       # Step 2: Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -32,7 +32,7 @@ jobs:
 
       # Step 4: Initialize Terraform
       - name: Terraform Init
-        run: terraform init -backend-config=backend/${{ github.ref_name }}.backend.tf
+        run: terraform init -backend-config=backend/${{ github.ref_name }}.backend.tf  # Line 43 here
 
       # Step 5: Apply Terraform Configuration
       - name: Terraform Apply
@@ -40,4 +40,4 @@ jobs:
 
       # Step 6: Output Deployed URLs
       - name: Output Site URL
-        run: echo "Site URL: $(terraform output site_url)"
+        run: echo "::set-output name=site_url::$(terraform output cloudfront_domain_name)"
