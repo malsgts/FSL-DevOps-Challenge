@@ -43,4 +43,4 @@ jobs:
       # Step 6: Output Deployed URLs
       - name: Output Site URL
         working-directory: terraform
-        run: echo "::set-output name=site_url::$(terraform output cloudfront_domain_name)"
+        run: echo "site_url=$(terraform output cloudfront_domain_name)" >> $GITHUB_OUTPUT
