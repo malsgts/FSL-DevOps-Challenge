@@ -1,0 +1,43 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    types: [opened, synchronize, reopened]
+
+jobs:
+  ci:
+    name: CI - Install, Lint, Test, Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 4: Linter (ESLint)
+      - name: Run linter
+        run: npm run lint
+
+      # Step 5: Run Tests (Jest)
+      - name: Run tests
+        env:
+          CI: true
+        run: npm run test
+
+      # Step 6: Build Application
+      - name: Build application
+        run: npm run build
