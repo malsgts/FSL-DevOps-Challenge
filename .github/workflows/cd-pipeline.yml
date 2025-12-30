@@ -32,12 +32,15 @@ jobs:
 
       # Step 4: Initialize Terraform
       - name: Terraform Init
-        run: terraform init -backend-config=backend/${{ github.ref_name }}.backend.tf  # Line 43 here
+        run: terraform init -backend-config=backend/${{ github.ref_name }}.backend.tf
+        working-directory: terraform
 
       # Step 5: Apply Terraform Configuration
       - name: Terraform Apply
         run: terraform apply -var-file=env/${{ github.ref_name }}.tfvars -auto-approve
+        working-directory: terraform
 
       # Step 6: Output Deployed URLs
       - name: Output Site URL
-        run: echo "::set-output name=site_url::$(terraform output cloudfront_domain_name)"
+        run: echo "site_url=$(terraform output -raw cloudfront_domain_name)" >> $GITHUB_OUTPUT
+        working-directory: terraform
