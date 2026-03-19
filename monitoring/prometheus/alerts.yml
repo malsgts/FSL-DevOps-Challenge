@@ -1,0 +1,140 @@
+# Prometheus Alerting Rules for crisis-alert-api-node
+#
+# These rules are designed to work with a Prometheus instance scraping the
+# crisis-alert-api-node service. They cover:
+#   1. PubSub serialization error monitoring
+#   2. Blueprint site-data-missing error monitoring
+#   3. General service health checks
+#
+# Prerequisites:
+#   - The application exposes Prometheus metrics at /metrics
+#   - Custom counters are instrumented in the application code
+#
+# Expected application-level counters (to be added in crisis-alert-api-node):
+#   - pubsub_serialization_errors_total{topic="..."}
+#   - blueprint_site_data_missing_total
+#   - pubsub_messages_published_total{topic="..."}
+
+groups:
+  - name: crisis-alert-pubsub
+    interval: 60s
+    rules:
+      # -----------------------------------------------------------------------
+      # PubSub Serialization Errors
+      # -----------------------------------------------------------------------
+
+      # Alert when PubSub serialization errors exceed threshold in a 24h window.
+      # Corresponds to pubsubObserver.js L412 "Error serializing message".
+      - alert: PubSubSerializationErrorsHigh
+        expr: |
+          sum(increase(pubsub_serialization_errors_total[24h])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: crisis-alert-api-node
+          component: pubsub
+        annotations:
+          summary: "High PubSub serialization error rate"
+          description: >-
+            The crisis-alert-api-node service has recorded
+            {{ $value | printf "%.0f" }} PubSub serialization errors in the
+            last 24 hours (threshold: 10).
+            Check container logs for "Error serializing message" entries.
+          runbook_url: "https://github.com/centegix-product/crisis-alert-api-node/blob/main/docs/runbooks/pubsub-errors.md"
+
+      # Alert when PubSub serialization errors spike over a short window.
+      - alert: PubSubSerializationErrorSpike
+        expr: |
+          sum(rate(pubsub_serialization_errors_total[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: critical
+          service: crisis-alert-api-node
+          component: pubsub
+        annotations:
+          summary: "PubSub serialization error spike detected"
+          description: >-
+            The crisis-alert-api-node service is experiencing a sustained spike
+            in PubSub serialization errors (> 0.1/s for 10 minutes).
+            Immediate investigation recommended.
+
+      # -----------------------------------------------------------------------
+      # PubSub Message Volume
+      # -----------------------------------------------------------------------
+
+      # Alert when a PubSub topic receives no messages for an extended period.
+      - alert: PubSubTopicVolumeZero
+        expr: |
+          sum by (topic) (rate(pubsub_messages_published_total[1h])) == 0
+        for: 1h
+        labels:
+          severity: warning
+          service: crisis-alert-api-node
+          component: pubsub
+        annotations:
+          summary: "PubSub topic {{ $labels.topic }} has zero message volume"
+          description: >-
+            No messages have been published to PubSub topic
+            {{ $labels.topic }} in the last hour. This may indicate that the
+            service has stopped emitting events or there is a connectivity
+            issue with PubSub.
+
+      # -----------------------------------------------------------------------
+      # Blueprint Site Data Availability
+      # -----------------------------------------------------------------------
+
+      # Alert when Blueprint site-data-missing errors exceed threshold.
+      - alert: BlueprintSiteDataMissingHigh
+        expr: |
+          sum(increase(blueprint_site_data_missing_total[24h])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: crisis-alert-api-node
+          component: blueprint
+        annotations:
+          summary: "High rate of Blueprint site data missing errors"
+          description: >-
+            The crisis-alert-api-node service has logged
+            {{ $value | printf "%.0f" }} instances of site data not being
+            available for the Nearmap availability check in the last 24 hours
+            (threshold: 5).
+            Check upstream data sources and database connectivity.
+
+  - name: crisis-alert-service-health
+    interval: 30s
+    rules:
+      # -----------------------------------------------------------------------
+      # General Service Health
+      # -----------------------------------------------------------------------
+
+      # Alert when the service is returning a high rate of 5xx errors.
+      - alert: CrisisAlertHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{service="crisis-alert-api-node", code=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="crisis-alert-api-node"}[5m]))
+          > 0.05
+        for: 10m
+        labels:
+          severity: critical
+          service: crisis-alert-api-node
+        annotations:
+          summary: "crisis-alert-api-node high error rate"
+          description: >-
+            More than 5% of HTTP requests to crisis-alert-api-node are
+            returning 5xx errors over the last 10 minutes.
+
+      # Alert when the service is down (no metrics being scraped).
+      - alert: CrisisAlertServiceDown
+        expr: up{job="crisis-alert-api-node"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: crisis-alert-api-node
+        annotations:
+          summary: "crisis-alert-api-node is down"
+          description: >-
+            Prometheus has been unable to scrape metrics from
+            crisis-alert-api-node for 5 minutes. The service may be down or
+            unreachable.
