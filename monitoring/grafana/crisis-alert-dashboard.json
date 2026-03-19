@@ -74,6 +74,7 @@
         "defaults": {
           "color": { "mode": "palette-classic" },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -108,8 +109,9 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(increase(pubsub_serialization_errors_total{topic=~\"$topic\"}[24h]))",
+          "expr": "sum(increase(pubsub_serialization_errors_total{topic=~\"$topic\"}[24h])) or vector(0)",
           "legendFormat": "Total Errors",
+          "instant": true,
           "refId": "A"
         }
       ]
@@ -284,6 +286,7 @@
         "defaults": {
           "color": { "mode": "palette-classic" },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -318,8 +321,9 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(increase(blueprint_site_data_missing_total[24h]))",
+          "expr": "sum(increase(blueprint_site_data_missing_total[24h])) or vector(0)",
           "legendFormat": "Total Errors",
+          "instant": true,
           "refId": "A"
         }
       ]
@@ -458,6 +462,7 @@
               { "color": "red", "value": 80 }
             ]
           },
+          "noValue": "N/A",
           "unit": "short"
         },
         "overrides": []
@@ -487,6 +492,7 @@
           },
           "expr": "up{job=\"crisis-alert-api-node\"}",
           "legendFormat": "{{ instance }}",
+          "instant": true,
           "refId": "A"
         }
       ]

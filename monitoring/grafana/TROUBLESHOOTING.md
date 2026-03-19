@@ -51,6 +51,22 @@ Without the `{topic=~"$topic"}` label matcher, the Topic dropdown has no effect 
 
 **Fix:** Added both blocks so that Grafana prompts for the Prometheus datasource on import and validates that required panel plugins (`stat`, `timeseries`) are available.
 
+### 6. Stat Panels Return "No Data" When Metric Has No Matching Series
+
+**Problem:** When a Prometheus counter has never been incremented (or the metric doesn't exist yet), `sum(increase(metric[24h]))` returns an empty result set. Grafana stat panels display this as "No data" with no visual indication of health.
+
+**Fix:**
+- Added `or vector(0)` to stat panel queries so they return `0` instead of empty when no series match:
+  ```promql
+  # Before – returns empty when metric has no series
+  sum(increase(pubsub_serialization_errors_total{topic=~"$topic"}[24h]))
+
+  # After – returns 0 when metric has no series
+  sum(increase(pubsub_serialization_errors_total{topic=~"$topic"}[24h])) or vector(0)
+  ```
+- Added `"noValue": "0"` to stat panel field configs as a secondary fallback
+- Set `"instant": true` on stat panel targets since they only need a single value, not a time series range
+
 ---
 
 ## Additional Checks (Beyond Dashboard JSON)
