@@ -52,7 +52,7 @@ and accessible.
 
 | Item | Detail |
 |------|--------|
-| **Why** | Grafana provides the interactive dashboard for visualising all metrics. |
+| **Why** | Grafana provides the interactive dashboard for visualizing all metrics. |
 | **What to check** | Verify that Grafana has a Prometheus data source configured and named `Prometheus`. |
 | **Dashboard** | Import `monitoring/grafana/crisis-alert-dashboard.json` via the Grafana UI or provisioning API. |
 
